@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>কার্টুন ভিডিও</title>
+<style>
+:root{--bg:#f6f5ff;--ink:#14142b;--panel:#fff;--blue:#2b50ff;--yellow:#ffd23f;--pink:#ff4f8b;--muted:#55557a;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--bg:#14142b;--ink:#f6f5ff;--panel:#1f1f3d;--muted:#a9a9cf;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans Bengali","Kalpurush","Nirmala UI",system-ui,sans-serif;line-height:1.6;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+main{max-width:520px;margin:0 auto}
+h1{font-size:2rem;margin:8px 0 4px;line-height:1.2}
+.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:6px 6px 0 var(--ink);padding:16px;margin-bottom:22px}
+.card h2{font-size:1.1rem;margin:0 0 12px}
+button,.btn{font:inherit;font-weight:700;color:#14142b;background:var(--yellow);border:3px solid var(--ink);border-radius:12px;padding:12px 16px;width:100%;box-shadow:4px 4px 0 var(--ink);cursor:pointer;text-align:center;display:block;text-decoration:none;margin-top:10px}
+button:first-of-type{margin-top:0}
+button:active,.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.go{background:var(--blue);color:#fff}
+button.stop{background:var(--pink);color:#fff}
+:is(button,.btn,input,select):focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+label{display:block;font-weight:600;margin:14px 0 4px}
+input[type=range],select{width:100%}
+select{font:inherit;padding:10px;border:2px solid var(--ink);border-radius:10px;background:var(--panel);color:var(--ink)}
+.file{margin:10px 0 0;color:var(--muted);word-break:break-all}
+.stage{border:3px solid var(--ink);border-radius:10px;overflow:hidden;background:#000;display:none;margin-top:12px}
+.stage canvas,.stage video{display:block;width:100%;height:auto}
+.bar{height:14px;border:2px solid var(--ink);border-radius:8px;overflow:hidden;margin:12px 0 4px;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--pink)}
+.msg{margin:8px 0 0;min-height:1.6em}
+.warn{color:var(--muted);font-size:.9rem;margin:10px 0 0}
+#result,#chan{display:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>কার্টুন ভিডিও</h1>
+  <p class="sub">যেকোনো ভিডিওকে কার্টুনের মতো বানান। ইন্টারনেট ছাড়াই চলে, ভিডিও আপনার ফোনেই থাকে।</p>
+
+  <section class="card" id="chan">
+    <h2>আমাদের চ্যানেল</h2>
+    <div id="chanList"></div>
+  </section>
+
+  <section class="card">
+    <h2>১. ভিডিও বাছুন</h2>
+    <input id="file" type="file" accept="video/*" hidden>
+    <button id="pick" type="button">ভিডিও বাছুন</button>
+    <p class="file" id="fname">এখনো কোনো ভিডিও বাছা হয়নি</p>
+  </section>
+
+  <section class="card">
+    <h2>২. স্টাইল</h2>
+    <label for="preset">তৈরি স্টাইল</label>
+    <select id="preset">
+      <option value="comic">কমিক (মোটা রেখা, কম রং)</option>
+      <option value="anime" selected>অ্যানিমে ধাঁচ (সুষম)</option>
+      <option value="soft">নরম কার্টুন (হালকা রেখা, বেশি রং)</option>
+    </select>
+    <label for="levels">রঙের ধাপ: <span id="levelsV">6</span></label>
+    <input id="levels" type="range" min="3" max="9" value="6">
+    <label for="lines">কালো রেখা: <span id="linesV">5</span></label>
+    <input id="lines" type="range" min="1" max="10" value="5">
+    <label for="res">মান</label>
+    <select id="res">
+      <option value="360">দ্রুত (৩৬০)</option>
+      <option value="480" selected>মাঝারি (৪৮০)</option>
+      <option value="640">ভালো, কিন্তু ধীর (৬৪০)</option>
+    </select>
+  </section>
+
+  <section class="card">
+    <h2>৩. কার্টুন বানান</h2>
+    <button id="go" class="go" type="button" disabled>কার্টুন বানান</button>
+    <button id="stop" class="stop" type="button" style="display:none">থামান</button>
+    <div class="bar" id="bar"><i id="fill"></i></div>
+    <p class="msg" id="msg"></p>
+    <div class="stage" id="stage"><canvas id="canvas"></canvas></div>
+    <p class="warn">প্রসেস চলার সময় এই পেজ খোলা রাখুন, অন্য অ্যাপে যাবেন না। ভিডিও যত লম্বা, সময় তত বেশি লাগবে। পেজ বন্ধ করলে তৈরি ভিডিও মুছে যাবে, তাই আগে সেভ করে নিন।</p>
+  </section>
+
+  <section class="card" id="result">
+    <h2>তৈরি হয়েছে!</h2>
+    <div class="stage" style="display:block;margin-top:0"><video id="rvideo" controls playsinline></video></div>
+    <a id="dl" class="btn" download="cartoon-video.webm">ভিডিও সেভ করুন</a>
+  </section>
+</main>
+
+<script>
+// চ্যানেল দেখাতে চাইলে নিচে নাম আর লিংক বসান। উদাহরণ:
+// {name:'আমাদের টেলিগ্রাম চ্যানেল', url:'https://t.me/yourchannel'}
+const CHANNELS = [
+];
+
+const $ = id => document.getElementById(id);
+const ctx = $('canvas').getContext('2d', {willReadFrequently:true});
+let currentFile = null, cancelled = false, running = false, g = null;
+
+if (CHANNELS.length){
+  $('chan').style.display = 'block';
+  $('chanList').innerHTML = CHANNELS.map(c =>
+    '<a class="btn" target="_blank" rel="noopener" href="' + c.url + '">' + c.name + '</a>').join('');
+}
+
+const PRESETS = {comic:{levels:4, lines:7}, anime:{levels:6, lines:5}, soft:{levels:8, lines:3}};
+function setSliders(l, n){
+  $('levels').value = l; $('levelsV').textContent = l;
+  $('lines').value = n;  $('linesV').textContent = n;
+}
+$('preset').onchange = e => { const p = PRESETS[e.target.value]; setSliders(p.levels, p.lines); };
+$('levels').oninput = e => $('levelsV').textContent = e.target.value;
+$('lines').oninput  = e => $('linesV').textContent = e.target.value;
+
+$('pick').onclick = () => $('file').click();
+$('file').onchange = e => {
+  currentFile = e.target.files[0] || null;
+  $('fname').textContent = currentFile ? currentFile.name : 'এখনো কোনো ভিডিও বাছা হয়নি';
+  $('go').disabled = !currentFile;
+  $('result').style.display = 'none';
+};
+$('stop').onclick = () => { cancelled = true; };
+const say = t => $('msg').textContent = t;
+
+function cartoon(w, h, levels, thr){
+  const img = ctx.getImageData(0, 0, w, h), d = img.data, n = w * h;
+  if (!g || g.length !== n) g = new Uint8Array(n);
+  for (let i = 0, j = 0; j < n; i += 4, j++) g[j] = (d[i]*77 + d[i+1]*150 + d[i+2]*29) >> 8;
+  const step = 255 / (levels - 1);
+  for (let i = 0; i < d.length; i += 4){
+    for (let c = 0; c < 3; c++){
+      const v = d[i+c];
+      d[i+c] = Math.round(v / step) * step * 0.85 + v * 0.15;
+    }
+  }
+  const soft = 70;
+  for (let y = 1; y < h-1; y++){
+    for (let x = 1; x < w-1; x++){
+      const p = y*w + x;
+      const gx = -g[p-w-1] + g[p-w+1] - 2*g[p-1] + 2*g[p+1] - g[p+w-1] + g[p+w+1];
+      const gy = -g[p-w-1] - 2*g[p-w] - g[p-w+1] + g[p+w-1] + 2*g[p+w] + g[p+w+1];
+      const m = Math.abs(gx) + Math.abs(gy);
+      if (m > thr){
+        const k = 1 - 0.93 * Math.min(1, (m - thr) / soft), q = p*4;
+        d[q] *= k; d[q+1] *= k; d[q+2] *= k;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+$('go').onclick = async () => {
+  if (!currentFile || running) return;
+  if (!window.MediaRecorder){ say('এই ব্রাউজারে ভিডিও রেকর্ডিং চলে না। Chrome ব্যবহার করুন।'); return; }
+  running = true; cancelled = false;
+  $('go').style.display = 'none'; $('stop').style.display = 'block';
+  $('bar').style.display = 'block'; $('fill').style.width = '0%';
+  $('stage').style.display = 'block'; $('result').style.display = 'none';
+  say('ভিডিও লোড হচ্ছে…');
+
+  const video = document.createElement('video');
+  video.playsInline = true; video.preload = 'auto';
+  const url = URL.createObjectURL(currentFile);
+  video.src = url;
+  let wake = null;
+
+  try {
+    try { wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    await new Promise((ok, no) => { video.onloadedmetadata = ok; video.onerror = () => no(new Error('load')); });
+
+    const scale = Math.min(1, +$('res').value / Math.max(video.videoWidth, video.videoHeight));
+    const w = Math.max(2, Math.round(video.videoWidth * scale / 2) * 2);
+    const h = Math.max(2, Math.round(video.videoHeight * scale / 2) * 2);
+    $('canvas').width = w; $('canvas').height = h;
+    const levels = +$('levels').value, thr = 360 - (+$('lines').value) * 30;
+
+    const stream = $('canvas').captureStream(30);
+    let ac = null;
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      await ac.resume();
+      const src = ac.createMediaElementSource(video);
+      const dest = ac.createMediaStreamDestination();
+      src.connect(dest);
+      dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+    } catch (e) { video.muted = true; }
+
+    const types = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const rec = new MediaRecorder(stream, mime ? {mimeType: mime, videoBitsPerSecond: 3000000} : {});
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(r => rec.onstop = r);
+
+    const draw = () => {
+      if (cancelled || video.ended) return;
+      ctx.filter = 'blur(1.5px) saturate(1.4) contrast(1.1)';
+      ctx.drawImage(video, 0, 0, w, h);
+      ctx.filter = 'none';
+      cartoon(w, h, levels, thr);
+      const pct = Math.min(100, Math.round(video.currentTime / video.duration * 100));
+      $('fill').style.width = pct + '%';
+      say('প্রসেস হচ্ছে… ' + pct + '%');
+      if ('requestVideoFrameCallback' in video) video.requestVideoFrameCallback(draw);
+      else requestAnimationFrame(draw);
+    };
+
+    const ended = new Promise(r => video.onended = r);
+    const cancel = new Promise(r => { const t = setInterval(() => { if (cancelled){ clearInterval(t); r(); } }, 200); });
+    rec.start(500);
+    await video.play();
+    draw();
+    await Promise.race([ended, cancel]);
+
+    video.pause();
+    rec.stop();
+    await stopped;
+    if (ac) ac.close();
+
+    if (cancelled){ say('থামানো হয়েছে।'); }
+    else {
+      const type = rec.mimeType || 'video/webm';
+      const out = URL.createObjectURL(new Blob(chunks, {type}));
+      $('rvideo').src = out;
+      $('dl').href = out;
+      $('dl').download = 'cartoon-video.' + (type.includes('mp4') ? 'mp4' : 'webm');
+      $('result').style.display = 'block';
+      $('fill').style.width = '100%';
+      say('শেষ! নিচে ভিডিও দেখুন ও সেভ করুন।');
+      $('result').scrollIntoView({behavior: 'smooth'});
+    }
+  } catch (e) {
+    say('সমস্যা হয়েছে। অন্য একটা ভিডিও দিয়ে চেষ্টা করুন, অথবা Chrome ব্যবহার করুন।');
+  } finally {
+    URL.revokeObjectURL(url);
+    if (wake) wake.release();
+    running = false;
+    $('go').style.display = 'block'; $('stop').style.display = 'none';
+  }
+};
+</script>
+</body>
+</html>
